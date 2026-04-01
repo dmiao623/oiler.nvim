@@ -616,6 +616,200 @@ M.add_to_loclist = {
   end,
 }
 
+M.toggle_tree_view = {
+  desc = "Toggle between flat and tree view",
+  callback = function()
+    local tree = require("oil.tree")
+    local view = require("oil.view")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if vim.bo[bufnr].filetype ~= "oil" then
+      return
+    end
+    if tree.is_tree_buffer(bufnr) then
+      tree.clear_state(bufnr)
+    else
+      local bufname = vim.api.nvim_buf_get_name(bufnr)
+      tree.init_state(bufnr, bufname)
+    end
+    view.render_buffer_async(bufnr, { refetch = false })
+  end,
+}
+
+M.tree_open = {
+  desc = "Expand directory under cursor in tree view",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if not tree.is_tree_buffer(bufnr) then
+      return
+    end
+    local entry = oil.get_cursor_entry()
+    if not entry then
+      return
+    end
+    local is_dir = entry.type == "directory" or entry.type == "link"
+    if not is_dir then
+      return
+    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[bufnr].oil_tree_line_info
+    if not line_info or not line_info[lnum] then
+      return
+    end
+    local parent_url = line_info[lnum].parent_url
+    local child_url = util.addslash(parent_url .. entry.name .. "/")
+    tree.expand(bufnr, child_url)
+  end,
+}
+
+M.tree_close = {
+  desc = "Collapse directory under cursor in tree view",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if not tree.is_tree_buffer(bufnr) then
+      return
+    end
+    local entry = oil.get_cursor_entry()
+    if not entry then
+      return
+    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[bufnr].oil_tree_line_info
+    if not line_info or not line_info[lnum] then
+      return
+    end
+    local parent_url = line_info[lnum].parent_url
+    local is_dir = entry.type == "directory" or entry.type == "link"
+    if is_dir then
+      local child_url = util.addslash(parent_url .. entry.name .. "/")
+      if tree.is_expanded(bufnr, child_url) then
+        tree.collapse(bufnr, child_url)
+        return
+      end
+    end
+    -- If not a directory or not expanded, collapse the parent
+    local state = tree.get_state(bufnr)
+    if state and parent_url ~= state.root_url then
+      tree.collapse(bufnr, parent_url)
+    end
+  end,
+}
+
+M.tree_open_all = {
+  desc = "Expand all directories recursively in tree view",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if tree.is_tree_buffer(bufnr) then
+      tree.expand_all(bufnr)
+    end
+  end,
+}
+
+M.tree_close_all = {
+  desc = "Collapse all directories in tree view",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if tree.is_tree_buffer(bufnr) then
+      tree.collapse_all(bufnr)
+    end
+  end,
+}
+
+M.tree_set_root = {
+  desc = "Set directory under cursor as tree root",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if not tree.is_tree_buffer(bufnr) then
+      return
+    end
+    local entry = oil.get_cursor_entry()
+    if not entry then
+      return
+    end
+    local is_dir = entry.type == "directory" or entry.type == "link"
+    if not is_dir then
+      return
+    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[bufnr].oil_tree_line_info
+    if not line_info or not line_info[lnum] then
+      return
+    end
+    local parent_url = line_info[lnum].parent_url
+    local child_url = util.addslash(parent_url .. entry.name .. "/")
+    tree.set_root(bufnr, child_url)
+    -- expand fetches entries if not cached, then renders
+    tree.expand(bufnr, child_url)
+  end,
+}
+
+M.tree_indent = {
+  desc = "Indent entry in tree view (move into directory above)",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if not tree.is_tree_buffer(bufnr) then
+      return
+    end
+    local config = require("oil.config")
+    local indent_width = config.tree.indent
+    local indent_str = string.rep(" ", indent_width)
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]
+
+    local new_line
+    local id_prefix, rest = line:match("^(/%d+%s)(.*)")
+    if id_prefix then
+      new_line = id_prefix .. indent_str .. rest
+    else
+      -- New entry: indent at the start
+      new_line = indent_str .. line
+    end
+
+    vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum, true, { new_line })
+    vim.bo[bufnr].modified = true
+  end,
+}
+
+M.tree_unindent = {
+  desc = "Unindent entry in tree view (move out of current directory)",
+  callback = function()
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    if not tree.is_tree_buffer(bufnr) then
+      return
+    end
+    local config = require("oil.config")
+    local indent_width = config.tree.indent
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]
+
+    local new_line
+    local id_prefix, rest = line:match("^(/%d+%s)(.*)")
+    if id_prefix then
+      local lead_ws = rest:match("^(%s*)")
+      if #lead_ws >= indent_width then
+        new_line = id_prefix .. rest:sub(indent_width + 1)
+      end
+    else
+      -- New entry: unindent from start
+      local lead_ws = line:match("^(%s*)")
+      if #lead_ws >= indent_width then
+        new_line = line:sub(indent_width + 1)
+      end
+    end
+
+    if new_line then
+      vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum, true, { new_line })
+      vim.bo[bufnr].modified = true
+    end
+  end,
+}
+
 ---List actions for documentation generation
 ---@private
 M._get_actions = function()

@@ -74,6 +74,14 @@ local default_config = {
     ["gx"] = "actions.open_external",
     ["g."] = { "actions.toggle_hidden", mode = "n" },
     ["g\\"] = { "actions.toggle_trash", mode = "n" },
+    ["gT"] = { "actions.toggle_tree_view", mode = "n" },
+    ["zo"] = { "actions.tree_open", mode = "n" },
+    ["zc"] = { "actions.tree_close", mode = "n" },
+    ["zO"] = { "actions.tree_open_all", mode = "n" },
+    ["zM"] = { "actions.tree_close_all", mode = "n" },
+    ["zr"] = { "actions.tree_set_root", mode = "n" },
+    [">>"] = { "actions.tree_indent", mode = "n" },
+    ["<<"] = { "actions.tree_unindent", mode = "n" },
   },
   -- Set to false to disable all of the above keymaps
   use_default_keymaps = true,
@@ -201,6 +209,20 @@ local default_config = {
   keymaps_help = {
     border = nil,
   },
+  -- Configuration for tree view
+  tree = {
+    -- Default view mode when opening oil
+    default_view = "flat",
+    -- Number of spaces per indentation level in tree view
+    indent = 2,
+    -- Icons for expand/collapse indicators
+    icons = {
+      expanded = "▾",
+      collapsed = "▸",
+    },
+    -- Depth to auto-expand when opening tree view (0 = only root)
+    auto_expand_depth = 0,
+  },
 }
 
 -- The adapter API hasn't really stabilized yet. We're not ready to advertise or encourage people to
@@ -248,6 +270,7 @@ default_config.view_options.highlight_filename = nil
 ---@field progress oil.ProgressWindowConfig
 ---@field ssh oil.SimpleWindowConfig
 ---@field keymaps_help oil.SimpleWindowConfig
+---@field tree oil.TreeConfig
 local M = {}
 
 -- For backwards compatibility
@@ -277,6 +300,19 @@ local M = {}
 ---@field progress? oil.SetupProgressWindowConfig Configuration for the floating progress window
 ---@field ssh? oil.SetupSimpleWindowConfig Configuration for the floating SSH window
 ---@field keymaps_help? oil.SetupSimpleWindowConfig Configuration for the floating keymaps help window
+---@field tree? oil.SetupTreeConfig Configuration for tree view
+
+---@class (exact) oil.TreeConfig
+---@field default_view "flat"|"tree"
+---@field indent integer
+---@field icons {expanded: string, collapsed: string}
+---@field auto_expand_depth integer
+
+---@class (exact) oil.SetupTreeConfig
+---@field default_view? "flat"|"tree" Default view mode when opening oil
+---@field indent? integer Number of spaces per indentation level in tree view
+---@field icons? {expanded?: string, collapsed?: string} Icons for expand/collapse indicators
+---@field auto_expand_depth? integer Depth to auto-expand when opening tree view (0 = only root)
 
 ---@class (exact) oil.LspFileMethods
 ---@field enabled boolean

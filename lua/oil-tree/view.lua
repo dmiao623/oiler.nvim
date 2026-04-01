@@ -416,6 +416,9 @@ M.initialize = function(bufnr)
       if view_data and view_data.fs_event then
         view_data.fs_event:stop()
       end
+      -- Clean up tree state
+      local tree = require("oil.tree")
+      tree.clear_state(bufnr)
     end,
   })
   vim.api.nvim_create_autocmd("BufEnter", {
@@ -629,6 +632,157 @@ local function get_sort_function(adapter, num_entries)
   end
 end
 
+---Render a tree view buffer
+---@param bufnr integer
+---@param opts nil|table
+---@return boolean
+local function render_tree_buffer(bufnr, opts)
+  local tree = require("oil.tree")
+  if bufnr == 0 then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return false
+  end
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
+  opts = vim.tbl_extend("keep", opts or {}, {
+    jump = false,
+    jump_first = false,
+  })
+  local scheme = util.parse_url(bufname)
+  local adapter = util.get_adapter(bufnr, true)
+  if not scheme or not adapter then
+    return false
+  end
+
+  local walked = tree.walk_entries(bufnr)
+  local column_defs = columns.get_supported_columns(scheme)
+
+  local seek_after_render = M.get_last_cursor(bufname)
+  local seek_after_render_found = false
+  local jump_idx
+  if opts.jump_first then
+    jump_idx = 1
+  end
+
+  local line_table = {}
+  local col_width = {}
+  local col_align = {}
+  for i, col_def in ipairs(column_defs) do
+    col_width[i + 1] = 1
+    local _, conf = util.split_config(col_def)
+    col_align[i + 1] = conf and conf.align or "left"
+  end
+
+  -- Track line metadata for the parser
+  local line_info = {}
+  local indent_width = config.tree.indent
+
+  -- Find icon column index among configured columns
+  local icon_col_idx = nil
+  for i, col_def in ipairs(column_defs) do
+    local col_name = util.split_config(col_def)
+    if col_name == "icon" then
+      icon_col_idx = i + 1 -- +1 because cols[1] is the ID column
+      break
+    end
+  end
+
+  local state = tree.get_state(bufnr)
+
+  for _, item in ipairs(walked) do
+    local entry = item.entry
+    local depth = item.depth
+    local parent_url = item.parent_url
+
+    local name = entry[FIELD_NAME]
+    local _, is_hidden = M.should_display(name, bufnr)
+    local cols = M.format_entry_cols(entry, column_defs, col_width, adapter, is_hidden, bufnr)
+
+    local indent = string.rep(" ", depth * indent_width)
+
+    if icon_col_idx then
+      -- For directories, replace the icon with expanded/collapsed folder icon
+      local is_dir = entry[FIELD_TYPE] == "directory"
+      if not is_dir and entry[FIELD_TYPE] == "link" then
+        local meta = entry[FIELD_META]
+        is_dir = meta and meta.link_stat and meta.link_stat.type == "directory"
+      end
+      if is_dir then
+        local child_url = util.addslash(parent_url .. entry[FIELD_NAME] .. "/")
+        local dir_icon = state and state.expanded[child_url] and config.tree.icons.expanded
+          or config.tree.icons.collapsed
+        local icon_chunk = cols[icon_col_idx]
+        local icon_hl = type(icon_chunk) == "table" and icon_chunk[2] or nil
+        cols[icon_col_idx] = { dir_icon .. " ", icon_hl or "OilDirIcon" }
+      end
+
+      -- Prepend indentation to the icon column (not tracked in col_width,
+      -- so deeper entries naturally push subsequent columns rightward)
+      local icon_chunk = cols[icon_col_idx]
+      if type(icon_chunk) == "table" then
+        cols[icon_col_idx] = { indent .. icon_chunk[1], icon_chunk[2] }
+      else
+        cols[icon_col_idx] = indent .. icon_chunk
+      end
+    else
+      -- No icon column configured: indent the name column (last element)
+      local last = cols[#cols]
+      if type(last) == "table" then
+        cols[#cols] = { indent .. last[1], last[2] }
+      else
+        cols[#cols] = indent .. last
+      end
+    end
+
+    table.insert(line_table, cols)
+    local lnum = #line_table
+    line_info[lnum] = { parent_url = parent_url, depth = depth }
+
+    if seek_after_render == name then
+      seek_after_render_found = true
+      jump_idx = lnum
+    end
+  end
+
+  local lines, highlights = util.render_table(line_table, col_width, col_align)
+
+  vim.bo[bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+  vim.bo[bufnr].modifiable = false
+  vim.bo[bufnr].modified = false
+  util.set_highlights(bufnr, highlights)
+
+  -- Store line info for the parser
+  vim.b[bufnr].oil_tree_line_info = line_info
+
+  if opts.jump then
+    vim.schedule(function()
+      for _, winid in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_is_valid(winid) and vim.api.nvim_win_get_buf(winid) == bufnr then
+          if jump_idx then
+            local lnum = jump_idx
+            local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]
+            local id_str = line:match("^/(%d+)")
+            local id = tonumber(id_str)
+            if id then
+              local entry = cache.get_entry_by_id(id)
+              if entry then
+                local ename = entry[FIELD_NAME]
+                local col = line:find(ename, 1, true) or (id_str:len() + 1)
+                vim.api.nvim_win_set_cursor(winid, { lnum, col - 1 })
+                return
+              end
+            end
+          end
+          constrain_cursor(bufnr, "name")
+        end
+      end
+    end)
+  end
+  return seek_after_render_found
+end
+
 ---@param bufnr integer
 ---@param opts nil|table
 ---    jump boolean
@@ -637,6 +791,11 @@ end
 local function render_buffer(bufnr, opts)
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()
+  end
+  -- Delegate to tree renderer if this is a tree buffer
+  local tree = require("oil.tree")
+  if tree.is_tree_buffer(bufnr) then
+    return render_tree_buffer(bufnr, opts)
   end
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return false
@@ -952,6 +1111,47 @@ M.render_buffer_async = function(bufnr, opts, callback)
   end)
   if not opts.refetch then
     finish()
+    return
+  end
+
+  -- For tree buffers, fetch all expanded directories
+  local tree = require("oil.tree")
+  if tree.is_tree_buffer(bufnr) then
+    local expanded_urls = tree.get_expanded_urls(bufnr)
+    local pending = #expanded_urls
+    if pending == 0 then
+      finish()
+      return
+    end
+    local had_error = false
+    for _, url in ipairs(expanded_urls) do
+      cache.begin_update_url(url)
+      adapter.list(url, get_used_columns(), function(err, entries, fetch_more)
+        if had_error then
+          return
+        end
+        if err then
+          cache.end_update_url(url)
+          had_error = true
+          handle_error(err)
+          return
+        end
+        if entries then
+          for _, entry in ipairs(entries) do
+            cache.store_entry(url, entry)
+          end
+        end
+        if fetch_more then
+          vim.defer_fn(fetch_more, 4)
+        else
+          cache.end_update_url(url)
+          pending = pending - 1
+          if pending == 0 then
+            finish()
+          end
+        end
+      end)
+    end
     return
   end
 

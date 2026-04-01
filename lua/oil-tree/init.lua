@@ -52,17 +52,26 @@ M.get_entry_on_line = function(bufnr, lnum)
   end
   local column_defs = columns.get_supported_columns(adapter)
   local result = parser.parse_line(adapter, line, column_defs)
+
+  -- In tree view, strip indentation from parsed names
+  local tree = require("oil.tree")
+  local is_tree = tree.is_tree_buffer(bufnr)
+
   if result then
+    local parsed_name = result.data.name
+    if is_tree and parsed_name then
+      parsed_name = vim.trim(parsed_name)
+    end
     if result.entry then
       local entry = util.export_entry(result.entry)
-      entry.parsed_name = result.data.name
+      entry.parsed_name = parsed_name
       return entry
     else
       return {
         id = result.data.id,
-        name = result.data.name,
+        name = parsed_name,
         type = result.data._type,
-        parsed_name = result.data.name,
+        parsed_name = parsed_name,
       }
     end
   end
@@ -146,7 +155,24 @@ M.get_current_dir = function(bufnr)
   local config = require("oil.config")
   local fs = require("oil.fs")
   local util = require("oil.util")
-  local buf_name = vim.api.nvim_buf_get_name(bufnr or 0)
+  bufnr = bufnr or 0
+
+  -- In tree view, return the directory under the cursor
+  local tree = require("oil.tree")
+  if tree.is_tree_buffer(bufnr) then
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[bufnr].oil_tree_line_info
+    if line_info and line_info[lnum] then
+      local parent_url = line_info[lnum].parent_url
+      local scheme, path = util.parse_url(parent_url)
+      if config.adapters[scheme] == "files" then
+        assert(path)
+        return fs.posix_to_os_path(path)
+      end
+    end
+  end
+
+  local buf_name = vim.api.nvim_buf_get_name(bufnr)
   local scheme, path = util.parse_url(buf_name)
   if config.adapters[scheme] == "files" then
     assert(path)
@@ -381,6 +407,25 @@ M.open = function(dir, opts, cb)
   local config = require("oil.config")
   local util = require("oil.util")
   local view = require("oil.view")
+
+  if not dir then
+    local tree = require("oil.tree")
+    local bufnr = vim.api.nvim_get_current_buf()
+    local state = tree.get_state(bufnr)
+    if state then
+      local bufname = vim.api.nvim_buf_get_name(bufnr)
+      local buf_url = util.addslash(bufname)
+      if state.root_url ~= buf_url then
+        tree.set_root(bufnr, buf_url)
+        tree.expand(bufnr, buf_url)
+        if cb then
+          cb()
+        end
+        return
+      end
+    end
+  end
+
   local parent_url, basename = M.get_url_for_path(dir)
   if basename then
     view.set_last_cursor(parent_url, basename)
@@ -685,14 +730,43 @@ M.select = function(opts, callback)
     return finish("Could not find entry under cursor")
   end
 
+  -- In tree view, <CR> on a directory toggles expand/collapse
+  local tree = require("oil.tree")
+  local cur_bufnr = vim.api.nvim_get_current_buf()
+  if tree.is_tree_buffer(cur_bufnr) and #entries == 1 and util.is_directory(entries[1]) then
+    local entry = entries[1]
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[cur_bufnr].oil_tree_line_info
+    if line_info and line_info[lnum] then
+      local parent_url = line_info[lnum].parent_url
+      local child_url = util.addslash(parent_url .. entry.name .. "/")
+      tree.toggle_expand(cur_bufnr, child_url)
+      return finish()
+    end
+  end
+
   -- Check if any of these entries are moved from their original location
   local bufname = vim.api.nvim_buf_get_name(0)
   local any_moved = false
-  for _, entry in ipairs(entries) do
+  for idx, entry in ipairs(entries) do
     -- Ignore entries with ID 0 (typically the "../" entry)
     if entry.id ~= 0 then
       local is_new_entry = entry.id == nil
-      local is_moved_from_dir = entry.id and cache.get_parent_url(entry.id) ~= bufname
+      local compare_url = bufname
+      -- In tree view, compare against the parent URL from line info
+      if tree.is_tree_buffer(cur_bufnr) and entry.id then
+        local lnum
+        if visual_range then
+          lnum = visual_range.start_lnum + idx - 1
+        else
+          lnum = vim.api.nvim_win_get_cursor(0)[1]
+        end
+        local line_info = vim.b[cur_bufnr].oil_tree_line_info
+        if line_info and line_info[lnum] then
+          compare_url = line_info[lnum].parent_url
+        end
+      end
+      local is_moved_from_dir = entry.id and cache.get_parent_url(entry.id) ~= compare_url
       local is_renamed = entry.parsed_name ~= entry.name
       local internal_entry = entry.id and cache.get_entry_by_id(entry.id)
       if internal_entry then
@@ -813,9 +887,6 @@ local function maybe_hijack_directory_buffer(bufnr)
   local config = require("oil.config")
   local fs = require("oil.fs")
   local util = require("oil.util")
-  if not config.default_file_explorer then
-    return false
-  end
   local bufname = vim.api.nvim_buf_get_name(bufnr)
   if bufname == "" then
     return false
@@ -1097,6 +1168,11 @@ M.load_oil_buffer = function(bufnr)
       end
       if vim.endswith(bufname, "/") then
         vim.cmd.doautocmd({ args = { "BufReadPre", bufname }, mods = { emsg_silent = true } })
+        -- Initialize tree view if configured as default
+        local tree = require("oil.tree")
+        if config.tree.default_view == "tree" and not tree.is_tree_buffer(bufnr) then
+          tree.init_state(bufnr, bufname)
+        end
         view.initialize(bufnr)
         vim.cmd.doautocmd({ args = { "BufReadPost", bufname }, mods = { emsg_silent = true } })
       else
@@ -1397,15 +1473,7 @@ M.setup = function(opts)
       vim.w.oil_original_alternate = vim.w[parent_win].oil_original_alternate
     end,
   })
-  vim.api.nvim_create_autocmd("BufAdd", {
-    desc = "Detect directory buffer and open oil file browser",
-    group = aug,
-    pattern = "*",
-    nested = true,
-    callback = function(params)
-      maybe_hijack_directory_buffer(params.buf)
-    end,
-  })
+
   -- mksession doesn't save oil buffers in a useful way. We have to manually load them after a
   -- session finishes loading. See https://github.com/stevearc/oil.nvim/issues/29
   vim.api.nvim_create_autocmd("SessionLoadPost", {
@@ -1424,11 +1492,23 @@ M.setup = function(opts)
     end,
   })
 
-  local bufnr = vim.api.nvim_get_current_buf()
-  if maybe_hijack_directory_buffer(bufnr) and vim.v.vim_did_enter == 1 then
-    -- manually call load on a hijacked directory buffer if vim has already entered
-    -- (the BufReadCmd will not trigger)
-    M.load_oil_buffer(bufnr)
+  if config.default_file_explorer then
+    vim.api.nvim_create_autocmd("BufAdd", {
+      desc = "Detect directory buffer and open oil file browser",
+      group = aug,
+      pattern = "*",
+      nested = true,
+      callback = function(params)
+        maybe_hijack_directory_buffer(params.buf)
+      end,
+    })
+
+    local bufnr = vim.api.nvim_get_current_buf()
+    if maybe_hijack_directory_buffer(bufnr) and vim.v.vim_did_enter == 1 then
+      -- manually call load on a hijacked directory buffer if vim has already entered
+      -- (the BufReadCmd will not trigger)
+      M.load_oil_buffer(bufnr)
+    end
   end
 end
 

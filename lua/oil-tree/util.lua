@@ -914,6 +914,21 @@ M.get_edit_path = function(bufnr, entry, callback)
   local adapter = M.get_adapter(bufnr, true)
   assert(scheme and dir and adapter)
 
+  -- In tree view, use the parent URL from the line info instead of the buffer name
+  local tree = require("oil.tree")
+  if tree.is_tree_buffer(bufnr) then
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_info = vim.b[bufnr].oil_tree_line_info
+    if line_info and line_info[lnum] then
+      local parent_url = line_info[lnum].parent_url
+      local pscheme, pdir = M.parse_url(parent_url)
+      if pscheme and pdir then
+        scheme = pscheme
+        dir = pdir
+      end
+    end
+  end
+
   local url = scheme .. dir .. entry.name
   if M.is_directory(entry) then
     url = url .. "/"

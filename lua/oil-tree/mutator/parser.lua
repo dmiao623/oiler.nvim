@@ -318,4 +318,285 @@ M.parse = function(bufnr)
   return diffs, errors
 end
 
+---Parse a tree view buffer into diffs grouped by parent URL.
+---@param bufnr integer
+---@return table<string, oil.Diff[]> diffs_by_url
+---@return oil.ParseError[] errors
+M.parse_tree = function(bufnr)
+  local tree = require("oil.tree")
+  ---@type table<string, oil.Diff[]>
+  local diffs_by_url = {}
+  ---@type oil.ParseError[]
+  local errors = {}
+
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
+  local adapter = util.get_adapter(bufnr, true)
+  if not adapter then
+    table.insert(errors, {
+      lnum = 0,
+      col = 0,
+      message = string.format("Cannot parse buffer '%s': No adapter", bufname),
+    })
+    return diffs_by_url, errors
+  end
+
+  local state = tree.get_state(bufnr)
+  if not state then
+    table.insert(errors, {
+      lnum = 0,
+      col = 0,
+      message = "Buffer is not in tree view mode",
+    })
+    return diffs_by_url, errors
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
+  local column_defs = columns.get_supported_columns(adapter)
+  local indent_width = config.tree.indent
+
+  -- Depth stack for reconstructing the tree from indentation.
+  -- Each entry is {url=parent_url, depth=depth_level}
+  local depth_stack = { { url = state.root_url, depth = -1 } }
+
+  -- Per-directory tracking: original entries and seen names
+  ---@type table<string, table<string, integer>>
+  local original_entries_by_url = {}
+  ---@type table<string, table<string, boolean>>
+  local seen_names_by_url = {}
+
+  -- Pre-populate original entries for all expanded directories
+  for url in pairs(state.expanded) do
+    local children = cache.list_url(url)
+    local orig = {}
+    for _, child in pairs(children) do
+      local name = child[FIELD_NAME]
+      if view.should_display(name, bufnr) then
+        orig[name] = child[FIELD_ID]
+      end
+    end
+    original_entries_by_url[url] = orig
+    seen_names_by_url[url] = {}
+  end
+
+  local function get_diffs(url)
+    if not diffs_by_url[url] then
+      diffs_by_url[url] = {}
+    end
+    return diffs_by_url[url]
+  end
+
+  local function check_dupe(url, name, i)
+    local seen = seen_names_by_url[url]
+    if not seen then
+      seen = {}
+      seen_names_by_url[url] = seen
+    end
+    local check_name = name
+    if fs.is_mac or fs.is_windows then
+      check_name = name:lower()
+    end
+    if seen[check_name] then
+      table.insert(errors, { message = "Duplicate filename", lnum = i - 1, end_lnum = i, col = 0 })
+    else
+      seen[check_name] = true
+    end
+  end
+
+  for i, line in ipairs(lines) do
+    -- hack to be compatible with Lua 5.1
+    -- use return instead of goto
+    (function()
+      if line:match("^/%d+") then
+        -- Parse an existing entry line
+        local result, err = M.parse_line(adapter, line, column_defs)
+        if not result or err then
+          table.insert(errors, {
+            message = err,
+            lnum = i - 1,
+            end_lnum = i,
+            col = 0,
+          })
+          return
+        elseif result.data.id == 0 then
+          return
+        end
+        local parsed_entry = result.data
+        local entry = result.entry
+
+        local err_message
+        if not parsed_entry.name then
+          err_message = "No filename found"
+        elseif not entry then
+          err_message = "Could not find existing entry (was the ID changed?)"
+        end
+        if err_message then
+          table.insert(errors, {
+            message = err_message,
+            lnum = i - 1,
+            end_lnum = i,
+            col = 0,
+          })
+          return
+        end
+        assert(entry)
+
+        -- Extract depth from leading whitespace after the ID prefix
+        -- (indentation is on the icon column, not the name column)
+        local after_id = line:match("^/%d+%s(.*)$")
+        local lead_ws = after_id and after_id:match("^(%s*)") or ""
+        local depth = math.floor(#lead_ws / indent_width)
+        local trimmed_name = parsed_entry.name
+
+        -- Check for path separators in the trimmed name
+        if trimmed_name:match("/") or trimmed_name:match(fs.sep) then
+          table.insert(errors, {
+            message = "Filename cannot contain path separator",
+            lnum = i - 1,
+            end_lnum = i,
+            col = 0,
+          })
+          return
+        end
+
+        -- Determine parent URL from depth stack
+        while #depth_stack > 1 and depth_stack[#depth_stack].depth >= depth do
+          table.remove(depth_stack)
+        end
+        local parent_url = depth_stack[#depth_stack].url
+
+        -- If this is an expanded directory, push onto depth stack
+        local is_dir = parsed_entry._type == "directory"
+        if is_dir then
+          local child_url = util.addslash(parent_url .. trimmed_name .. "/")
+          if state.expanded[child_url] then
+            table.insert(depth_stack, { url = child_url, depth = depth })
+          end
+        end
+
+        check_dupe(parent_url, trimmed_name, i)
+
+        -- Determine the original parent URL for this entry
+        local ok, orig_parent_url = pcall(cache.get_parent_url, parsed_entry.id)
+        local original_entries = original_entries_by_url[parent_url] or {}
+        local diffs = get_diffs(parent_url)
+
+        if ok and orig_parent_url ~= parent_url then
+          -- Cross-directory move: entry moved from orig_parent_url to parent_url
+          -- Leave the entry in original_entries so that the end-of-function loop
+          -- generates a delete diff. The mutator needs both delete + new (with id)
+          -- to recognize this as a move rather than a copy.
+
+          -- Generate a new entry in the target directory
+          table.insert(diffs, {
+            type = "new",
+            name = trimmed_name,
+            entry_type = parsed_entry._type,
+            id = parsed_entry.id,
+            link = parsed_entry.link_target,
+          })
+        elseif original_entries[trimmed_name] == parsed_entry.id then
+          -- Entry unchanged in its directory (or only columns changed)
+          if entry[FIELD_TYPE] == "link" and not compare_link_target(entry[FIELD_META], parsed_entry) then
+            table.insert(diffs, {
+              type = "new",
+              name = trimmed_name,
+              entry_type = "link",
+              link = parsed_entry.link_target,
+            })
+          elseif entry[FIELD_TYPE] ~= parsed_entry._type then
+            table.insert(diffs, {
+              type = "new",
+              name = trimmed_name,
+              entry_type = parsed_entry._type,
+            })
+          else
+            original_entries[trimmed_name] = nil
+          end
+        else
+          -- Same directory but different name or ID mismatch: rename/move/copy
+          table.insert(diffs, {
+            type = "new",
+            name = trimmed_name,
+            entry_type = parsed_entry._type,
+            id = parsed_entry.id,
+            link = parsed_entry.link_target,
+          })
+        end
+
+        -- Check for column changes
+        for _, col_def in ipairs(column_defs) do
+          local col_name = util.split_config(col_def)
+          if columns.compare(adapter, col_name, entry, parsed_entry[col_name]) then
+            table.insert(diffs, {
+              type = "change",
+              name = trimmed_name,
+              entry_type = entry[FIELD_TYPE],
+              column = col_name,
+              value = parsed_entry[col_name],
+            })
+          end
+        end
+      else
+        -- Parse a new entry line
+        local raw_name = vim.trim(line)
+        if raw_name == "" then
+          return
+        end
+
+        -- Extract indentation
+        local indent_str = line:match("^(%s*)")
+        local depth = math.floor(#indent_str / indent_width)
+
+        -- Determine parent URL from depth stack
+        while #depth_stack > 1 and depth_stack[#depth_stack].depth >= depth do
+          table.remove(depth_stack)
+        end
+        local parent_url = depth_stack[#depth_stack].url
+
+        local name, isdir = parsedir(raw_name)
+        if vim.startswith(name, "/") then
+          table.insert(errors, {
+            message = "Paths cannot start with '/'",
+            lnum = i - 1,
+            end_lnum = i,
+            col = 0,
+          })
+          return
+        end
+        if name ~= "" then
+          local link_pieces = vim.split(name, " -> ", { plain = true })
+          local entry_type = isdir and "directory" or "file"
+          local link
+          if #link_pieces == 2 then
+            entry_type = "link"
+            name, link = unpack(link_pieces)
+          end
+          check_dupe(parent_url, name, i)
+          local diffs = get_diffs(parent_url)
+          table.insert(diffs, {
+            type = "new",
+            name = name,
+            entry_type = entry_type,
+            link = link,
+          })
+        end
+      end
+    end)()
+  end
+
+  -- Generate delete diffs for entries that were in the original but not in the buffer
+  for url, original_entries in pairs(original_entries_by_url) do
+    local diffs = get_diffs(url)
+    for name, child_id in pairs(original_entries) do
+      table.insert(diffs, {
+        type = "delete",
+        name = name,
+        id = child_id,
+      })
+    end
+  end
+
+  return diffs_by_url, errors
+end
+
 return M

@@ -48,7 +48,7 @@ local FIELD_TYPE = constants.FIELD_TYPE
 ---@field column string
 ---@field value any
 
----@param all_diffs table<integer, oil.Diff[]>
+---@param all_diffs table<integer|string, oil.Diff[]>
 ---@return oil.Action[]
 M.create_actions_from_diffs = function(all_diffs)
   ---@type oil.Action[]
@@ -84,12 +84,21 @@ M.create_actions_from_diffs = function(all_diffs)
       table.insert(actions, action)
     end
   end
-  for bufnr, diffs in pairs(all_diffs) do
-    local adapter = util.get_adapter(bufnr, true)
-    if not adapter then
-      error("Missing adapter")
+  for key, diffs in pairs(all_diffs) do
+    local parent_url, adapter
+    if type(key) == "string" then
+      -- Tree view: key is already a URL
+      parent_url = key
+      local scheme = util.parse_url(parent_url)
+      adapter = assert(config.get_adapter_by_scheme(scheme))
+    else
+      -- Flat view: key is bufnr
+      adapter = util.get_adapter(key, true)
+      if not adapter then
+        error("Missing adapter")
+      end
+      parent_url = vim.api.nvim_buf_get_name(key)
     end
-    local parent_url = vim.api.nvim_buf_get_name(bufnr)
     for _, diff in ipairs(diffs) do
       if diff.type == "new" then
         if diff.id then
@@ -515,16 +524,31 @@ M.try_write_changes = function(confirm, cb)
   mutation_in_progress = true
   -- Lock the buffer to prevent race conditions from the user modifying them during parsing
   view.lock_buffers()
+  local tree = require("oil.tree")
   for _, bufnr in ipairs(buffers) do
     if vim.bo[bufnr].modified then
-      local diffs, errors = parser.parse(bufnr)
-      all_diffs[bufnr] = diffs
-      local adapter = assert(util.get_adapter(bufnr, true))
-      if adapter.filter_error then
-        errors = vim.tbl_filter(adapter.filter_error, errors)
-      end
-      if not vim.tbl_isempty(errors) then
-        all_errors[bufnr] = errors
+      if tree.is_tree_buffer(bufnr) then
+        local tree_diffs, errors = parser.parse_tree(bufnr)
+        for parent_url, diffs in pairs(tree_diffs) do
+          all_diffs[parent_url] = diffs
+        end
+        local adapter = assert(util.get_adapter(bufnr, true))
+        if adapter.filter_error then
+          errors = vim.tbl_filter(adapter.filter_error, errors)
+        end
+        if not vim.tbl_isempty(errors) then
+          all_errors[bufnr] = errors
+        end
+      else
+        local diffs, errors = parser.parse(bufnr)
+        all_diffs[bufnr] = diffs
+        local adapter = assert(util.get_adapter(bufnr, true))
+        if adapter.filter_error then
+          errors = vim.tbl_filter(adapter.filter_error, errors)
+        end
+        if not vim.tbl_isempty(errors) then
+          all_errors[bufnr] = errors
+        end
       end
     end
   end
