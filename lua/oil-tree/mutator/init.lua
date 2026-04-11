@@ -1,16 +1,16 @@
-local Progress = require("oil.mutator.progress")
-local Trie = require("oil.mutator.trie")
-local cache = require("oil.cache")
-local columns = require("oil.columns")
-local config = require("oil.config")
-local confirmation = require("oil.mutator.confirmation")
-local constants = require("oil.constants")
-local fs = require("oil.fs")
-local lsp_helpers = require("oil.lsp.helpers")
-local oil = require("oil")
-local parser = require("oil.mutator.parser")
-local util = require("oil.util")
-local view = require("oil.view")
+local Progress = require("oil-tree.mutator.progress")
+local Trie = require("oil-tree.mutator.trie")
+local cache = require("oil-tree.cache")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local confirmation = require("oil-tree.mutator.confirmation")
+local constants = require("oil-tree.constants")
+local fs = require("oil-tree.fs")
+local lsp_helpers = require("oil-tree.lsp.helpers")
+local oil = require("oil-tree")
+local parser = require("oil-tree.mutator.parser")
+local util = require("oil-tree.util")
+local view = require("oil-tree.view")
 local M = {}
 
 local FIELD_NAME = constants.FIELD_NAME
@@ -524,7 +524,7 @@ M.try_write_changes = function(confirm, cb)
   mutation_in_progress = true
   -- Lock the buffer to prevent race conditions from the user modifying them during parsing
   view.lock_buffers()
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   for _, bufnr in ipairs(buffers) do
     if vim.bo[bufnr].modified then
       if tree.is_tree_buffer(bufnr) then

@@ -1,10 +1,10 @@
-local cache = require("oil.cache")
-local columns = require("oil.columns")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local fs = require("oil.fs")
-local util = require("oil.util")
-local view = require("oil.view")
+local cache = require("oil-tree.cache")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local fs = require("oil-tree.fs")
+local util = require("oil-tree.util")
+local view = require("oil-tree.view")
 local M = {}
 
 local FIELD_ID = constants.FIELD_ID
@@ -323,7 +323,7 @@ end
 ---@return table<string, oil.Diff[]> diffs_by_url
 ---@return oil.ParseError[] errors
 M.parse_tree = function(bufnr)
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   ---@type table<string, oil.Diff[]>
   local diffs_by_url = {}
   ---@type oil.ParseError[]

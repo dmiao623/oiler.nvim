@@ -1,6 +1,6 @@
-local cache = require("oil.cache")
-local constants = require("oil.constants")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local constants = require("oil-tree.constants")
+local util = require("oil-tree.util")
 local M = {}
 
 local FIELD_ID = constants.FIELD_ID
@@ -94,8 +94,8 @@ M.expand = function(bufnr, url)
     if not adapter then
       return
     end
-    local columns = require("oil.columns")
-    local config = require("oil.config")
+    local columns = require("oil-tree.columns")
+    local config = require("oil-tree.config")
     local cols = {}
     for _, def in ipairs(config.columns) do
       local name = util.split_config(def)
@@ -125,14 +125,14 @@ M.expand = function(bufnr, url)
         cache.end_update_url(url)
         vim.schedule(function()
           if vim.api.nvim_buf_is_valid(bufnr) then
-            local view = require("oil.view")
+            local view = require("oil-tree.view")
             view.render_buffer_async(bufnr, { refetch = false })
           end
         end)
       end
     end)
   else
-    local view = require("oil.view")
+    local view = require("oil-tree.view")
     view.render_buffer_async(bufnr, { refetch = false })
   end
 end
@@ -162,7 +162,7 @@ M.collapse = function(bufnr, url)
     end
   end
 
-  local view = require("oil.view")
+  local view = require("oil-tree.view")
   view.render_buffer_async(bufnr, { refetch = false })
 end
 
@@ -229,7 +229,7 @@ M.expand_all = function(bufnr, max_depth)
   if not adapter then
     return
   end
-  local config = require("oil.config")
+  local config = require("oil-tree.config")
   local cols = {}
   for _, def in ipairs(config.columns) do
     local name = util.split_config(def)
@@ -280,7 +280,7 @@ M.expand_all = function(bufnr, max_depth)
   end
 
   if pending == 0 then
-    local view = require("oil.view")
+    local view = require("oil-tree.view")
     view.render_buffer_async(bufnr, { refetch = false })
   end
 end
@@ -296,7 +296,7 @@ M.collapse_all = function(bufnr)
     return
   end
   state.expanded = { [state.root_url] = true }
-  local view = require("oil.view")
+  local view = require("oil-tree.view")
   view.render_buffer_async(bufnr, { refetch = false })
 end
 
@@ -313,8 +313,8 @@ M.walk_entries = function(bufnr)
     return {}
   end
 
-  local view = require("oil.view")
-  local columns_mod = require("oil.columns")
+  local view = require("oil-tree.view")
+  local columns_mod = require("oil-tree.columns")
   local adapter = util.get_adapter(bufnr, true)
   if not adapter then
     return {}
@@ -322,7 +322,7 @@ M.walk_entries = function(bufnr)
 
   local sort_fn = nil
   -- We need to get the sort function - replicate the logic from view
-  local config = require("oil.config")
+  local config = require("oil-tree.config")
   local sort_config = config.view_options.sort
   if vim.tbl_isempty(sort_config) then
     sort_config = { { "type", "asc" }, { "name", "asc" } }

@@ -1,4 +1,4 @@
-local util = require("oil.util")
+local util = require("oil-tree.util")
 describe("util", function()
   it("url_escape", function()
     local cases = {

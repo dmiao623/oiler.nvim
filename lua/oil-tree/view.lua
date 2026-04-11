@@ -1,12 +1,12 @@
 local uv = vim.uv or vim.loop
-local cache = require("oil.cache")
-local columns = require("oil.columns")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local fs = require("oil.fs")
-local keymap_util = require("oil.keymap_util")
-local loading = require("oil.loading")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local fs = require("oil-tree.fs")
+local keymap_util = require("oil-tree.keymap_util")
+local loading = require("oil-tree.loading")
+local util = require("oil-tree.util")
 local M = {}
 
 local FIELD_ID = constants.FIELD_ID
@@ -39,7 +39,7 @@ end
 
 ---Set the cursor to the last_cursor_entry if one exists
 M.maybe_set_cursor = function()
-  local oil = require("oil")
+  local oil = require("oil-tree")
   local bufname = vim.api.nvim_buf_get_name(0)
   local entry_name = last_cursor_entry[bufname]
   if not entry_name then
@@ -263,7 +263,7 @@ end
 --- @param cur integer[]
 --- @return integer[] | nil
 local function calc_constrained_cursor_pos(bufnr, adapter, mode, cur)
-  local parser = require("oil.mutator.parser")
+  local parser = require("oil-tree.mutator.parser")
   local line = vim.api.nvim_buf_get_lines(bufnr, cur[1] - 1, cur[1], true)[1]
   local column_defs = columns.get_supported_columns(adapter)
   local result = parser.parse_line(adapter, line, column_defs)
@@ -326,7 +326,7 @@ local function redraw_trash_virtual_text(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
   end
-  local parser = require("oil.mutator.parser")
+  local parser = require("oil-tree.mutator.parser")
   local adapter = util.get_adapter(bufnr, true)
   if not adapter or adapter.name ~= "trash" then
     return
@@ -417,7 +417,7 @@ M.initialize = function(bufnr)
         view_data.fs_event:stop()
       end
       -- Clean up tree state
-      local tree = require("oil.tree")
+      local tree = require("oil-tree.tree")
       tree.clear_state(bufnr)
     end,
   })
@@ -448,7 +448,7 @@ M.initialize = function(bufnr)
     group = "Oil",
     buffer = bufnr,
     callback = function()
-      local oil = require("oil")
+      local oil = require("oil-tree")
       if vim.wo.previewwindow then
         return
       end
@@ -514,7 +514,7 @@ M.initialize = function(bufnr)
           fs_event:stop()
           return
         end
-        local mutator = require("oil.mutator")
+        local mutator = require("oil-tree.mutator")
         if err or vim.bo[bufnr].modified or vim.b[bufnr].oil_dirty or mutator.is_mutating() then
           return
         end
@@ -637,7 +637,7 @@ end
 ---@param opts nil|table
 ---@return boolean
 local function render_tree_buffer(bufnr, opts)
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()
   end
@@ -793,7 +793,7 @@ local function render_buffer(bufnr, opts)
     bufnr = vim.api.nvim_get_current_buf()
   end
   -- Delegate to tree renderer if this is a tree buffer
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   if tree.is_tree_buffer(bufnr) then
     return render_tree_buffer(bufnr, opts)
   end
@@ -1115,7 +1115,7 @@ M.render_buffer_async = function(bufnr, opts, callback)
   end
 
   -- For tree buffers, fetch all expanded directories
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   if tree.is_tree_buffer(bufnr) then
     local expanded_urls = tree.get_expanded_urls(bufnr)
     local pending = #expanded_urls

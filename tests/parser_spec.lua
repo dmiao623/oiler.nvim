@@ -1,10 +1,10 @@
 require("plenary.async").tests.add_to_env()
-local constants = require("oil.constants")
-local parser = require("oil.mutator.parser")
-local test_adapter = require("oil.adapters.test")
+local constants = require("oil-tree.constants")
+local parser = require("oil-tree.mutator.parser")
+local test_adapter = require("oil-tree.adapters.test")
 local test_util = require("tests.test_util")
-local util = require("oil.util")
-local view = require("oil.view")
+local util = require("oil-tree.util")
+local view = require("oil-tree.view")
 
 local FIELD_ID = constants.FIELD_ID
 local FIELD_META = constants.FIELD_META

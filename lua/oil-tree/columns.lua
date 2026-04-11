@@ -1,6 +1,6 @@
-local config = require("oil.config")
-local constants = require("oil.constants")
-local util = require("oil.util")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local util = require("oil-tree.util")
 local M = {}
 
 local FIELD_NAME = constants.FIELD_NAME

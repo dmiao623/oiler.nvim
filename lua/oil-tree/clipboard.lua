@@ -1,11 +1,11 @@
-local cache = require("oil.cache")
-local columns = require("oil.columns")
-local config = require("oil.config")
-local fs = require("oil.fs")
-local oil = require("oil")
-local parser = require("oil.mutator.parser")
-local util = require("oil.util")
-local view = require("oil.view")
+local cache = require("oil-tree.cache")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local fs = require("oil-tree.fs")
+local oil = require("oil-tree")
+local parser = require("oil-tree.mutator.parser")
+local util = require("oil-tree.util")
+local view = require("oil-tree.view")
 
 local M = {}
 

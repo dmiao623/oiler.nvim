@@ -1,4 +1,4 @@
-local pathutil = require("oil.pathutil")
+local pathutil = require("oil-tree.pathutil")
 describe("pathutil", function()
   it("calculates parent path", function()
     local cases = {

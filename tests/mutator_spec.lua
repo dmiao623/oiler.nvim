@@ -1,8 +1,8 @@
 require("plenary.async").tests.add_to_env()
-local cache = require("oil.cache")
-local constants = require("oil.constants")
-local mutator = require("oil.mutator")
-local test_adapter = require("oil.adapters.test")
+local cache = require("oil-tree.cache")
+local constants = require("oil-tree.constants")
+local mutator = require("oil-tree.mutator")
+local test_adapter = require("oil-tree.adapters.test")
 local test_util = require("tests.test_util")
 
 local FIELD_ID = constants.FIELD_ID

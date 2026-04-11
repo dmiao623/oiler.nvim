@@ -1,5 +1,5 @@
 -- Manual test for minimizing/restoring progress window
-local Progress = require("oil.mutator.progress")
+local Progress = require("oil-tree.mutator.progress")
 
 local progress = Progress.new()
 

@@ -1,5 +1,5 @@
 -- integration with git operations
-local fs = require("oil.fs")
+local fs = require("oil-tree.fs")
 
 local M = {}
 

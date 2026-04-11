@@ -1,5 +1,5 @@
-local oil = require("oil")
-local util = require("oil.util")
+local oil = require("oil-tree")
+local util = require("oil-tree.util")
 describe("url", function()
   it("get_url_for_path", function()
     local cases = {

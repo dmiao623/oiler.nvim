@@ -1,8 +1,8 @@
-local cache = require("oil.cache")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local shell = require("oil.shell")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local shell = require("oil-tree.shell")
+local util = require("oil-tree.util")
 
 local M = {}
 

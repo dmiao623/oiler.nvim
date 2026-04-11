@@ -1,5 +1,5 @@
-local constants = require("oil.constants")
-local util = require("oil.util")
+local constants = require("oil-tree.constants")
+local util = require("oil-tree.util")
 local M = {}
 
 local FIELD_ID = constants.FIELD_ID

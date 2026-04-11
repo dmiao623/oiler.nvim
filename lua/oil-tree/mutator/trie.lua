@@ -1,4 +1,4 @@
-local util = require("oil.util")
+local util = require("oil-tree.util")
 
 ---@class (exact) oil.Trie
 ---@field new fun(): oil.Trie

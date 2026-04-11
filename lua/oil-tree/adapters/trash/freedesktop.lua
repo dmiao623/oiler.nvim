@@ -1,11 +1,11 @@
 -- Based on the FreeDesktop.org trash specification
 -- https://specifications.freedesktop.org/trash/1.0/
-local cache = require("oil.cache")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local files = require("oil.adapters.files")
-local fs = require("oil.fs")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local files = require("oil-tree.adapters.files")
+local fs = require("oil-tree.fs")
+local util = require("oil-tree.util")
 
 local uv = vim.uv or vim.loop
 local FIELD_META = constants.FIELD_META

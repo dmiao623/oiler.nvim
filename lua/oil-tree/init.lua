@@ -35,9 +35,9 @@ local M = {}
 ---@param lnum integer
 ---@return nil|oil.Entry
 M.get_entry_on_line = function(bufnr, lnum)
-  local columns = require("oil.columns")
-  local parser = require("oil.mutator.parser")
-  local util = require("oil.util")
+  local columns = require("oil-tree.columns")
+  local parser = require("oil-tree.mutator.parser")
+  local util = require("oil-tree.util")
   if vim.bo[bufnr].filetype ~= "oil" then
     return nil
   end
@@ -54,7 +54,7 @@ M.get_entry_on_line = function(bufnr, lnum)
   local result = parser.parse_line(adapter, line, column_defs)
 
   -- In tree view, strip indentation from parsed names
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   local is_tree = tree.is_tree_buffer(bufnr)
 
   if result then
@@ -104,7 +104,7 @@ end
 
 ---Discard all changes made to oil buffers
 M.discard_all_changes = function()
-  local view = require("oil.view")
+  local view = require("oil-tree.view")
   for _, bufnr in ipairs(view.get_all_buffers()) do
     if vim.bo[bufnr].modified then
       view.render_buffer_async(bufnr, {}, function(err)
@@ -126,39 +126,39 @@ end
 ---Change the display columns for oil
 ---@param cols oil.ColumnSpec[]
 M.set_columns = function(cols)
-  require("oil.view").set_columns(cols)
+  require("oil-tree.view").set_columns(cols)
 end
 
 ---Change the sort order for oil
 ---@param sort oil.SortSpec[] List of columns plus direction. See :help oil-columns to see which ones are sortable.
 ---@example
---- require("oil").set_sort({ { "type", "asc" }, { "size", "desc" } })
+--- require("oil-tree").set_sort({ { "type", "asc" }, { "size", "desc" } })
 M.set_sort = function(sort)
-  require("oil.view").set_sort(sort)
+  require("oil-tree.view").set_sort(sort)
 end
 
 ---Change how oil determines if the file is hidden
 ---@param is_hidden_file fun(filename: string, bufnr: integer): boolean Return true if the file/dir should be hidden
 M.set_is_hidden_file = function(is_hidden_file)
-  require("oil.view").set_is_hidden_file(is_hidden_file)
+  require("oil-tree.view").set_is_hidden_file(is_hidden_file)
 end
 
 ---Toggle hidden files and directories
 M.toggle_hidden = function()
-  require("oil.view").toggle_hidden()
+  require("oil-tree.view").toggle_hidden()
 end
 
 ---Get the current directory
 ---@param bufnr? integer
 ---@return nil|string
 M.get_current_dir = function(bufnr)
-  local config = require("oil.config")
-  local fs = require("oil.fs")
-  local util = require("oil.util")
+  local config = require("oil-tree.config")
+  local fs = require("oil-tree.fs")
+  local util = require("oil-tree.util")
   bufnr = bufnr or 0
 
   -- In tree view, return the directory under the cursor
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   if tree.is_tree_buffer(bufnr) then
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local line_info = vim.b[bufnr].oil_tree_line_info
@@ -190,9 +190,9 @@ M.get_url_for_path = function(dir, use_oil_parent)
   if use_oil_parent == nil then
     use_oil_parent = true
   end
-  local config = require("oil.config")
-  local fs = require("oil.fs")
-  local util = require("oil.util")
+  local config = require("oil-tree.config")
+  local fs = require("oil-tree.fs")
+  local util = require("oil-tree.util")
   if vim.bo.filetype == "netrw" and not dir then
     dir = vim.b.netrw_curdir
   end
@@ -216,10 +216,10 @@ end
 ---@return string
 ---@return nil|string
 M.get_buffer_parent_url = function(bufname, use_oil_parent)
-  local config = require("oil.config")
-  local fs = require("oil.fs")
-  local pathutil = require("oil.pathutil")
-  local util = require("oil.util")
+  local config = require("oil-tree.config")
+  local fs = require("oil-tree.fs")
+  local pathutil = require("oil-tree.pathutil")
+  local util = require("oil-tree.util")
   local scheme, path = util.parse_url(bufname)
   if not scheme then
     local parent, basename
@@ -274,10 +274,10 @@ end
 ---@param cb? fun() Called after the oil buffer is ready
 M.open_float = function(dir, opts, cb)
   opts = opts or {}
-  local config = require("oil.config")
-  local layout = require("oil.layout")
-  local util = require("oil.util")
-  local view = require("oil.view")
+  local config = require("oil-tree.config")
+  local layout = require("oil-tree.layout")
+  local util = require("oil-tree.util")
+  local view = require("oil-tree.view")
 
   local parent_url, basename = M.get_url_for_path(dir)
   if basename then
@@ -384,7 +384,7 @@ end
 ---@param oil_bufnr? integer
 local function update_preview_window(oil_bufnr)
   oil_bufnr = oil_bufnr or 0
-  local util = require("oil.util")
+  local util = require("oil-tree.util")
   util.run_after_load(oil_bufnr, function()
     local cursor_entry = M.get_cursor_entry()
     local preview_win_id = util.get_preview_win()
@@ -404,12 +404,12 @@ end
 ---@param cb? fun() Called after the oil buffer is ready
 M.open = function(dir, opts, cb)
   opts = opts or {}
-  local config = require("oil.config")
-  local util = require("oil.util")
-  local view = require("oil.view")
+  local config = require("oil-tree.config")
+  local util = require("oil-tree.util")
+  local view = require("oil-tree.view")
 
   if not dir then
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     local state = tree.get_state(bufnr)
     if state then
@@ -499,9 +499,9 @@ end
 ---@param callback? fun(err: nil|string) Called once the preview window has been opened
 M.open_preview = function(opts, callback)
   opts = opts or {}
-  local config = require("oil.config")
-  local layout = require("oil.layout")
-  local util = require("oil.util")
+  local config = require("oil-tree.config")
+  local layout = require("oil-tree.layout")
+  local util = require("oil-tree.util")
 
   local function finish(err)
     if err then
@@ -679,10 +679,10 @@ end
 ---@param opts nil|oil.SelectOpts
 ---@param callback nil|fun(err: nil|string) Called once all entries have been opened
 M.select = function(opts, callback)
-  local cache = require("oil.cache")
-  local config = require("oil.config")
-  local constants = require("oil.constants")
-  local util = require("oil.util")
+  local cache = require("oil-tree.cache")
+  local config = require("oil-tree.config")
+  local constants = require("oil-tree.constants")
+  local util = require("oil-tree.util")
   local FIELD_META = constants.FIELD_META
   opts = vim.tbl_extend("keep", opts or {}, {})
 
@@ -731,7 +731,7 @@ M.select = function(opts, callback)
   end
 
   -- In tree view, <CR> on a directory toggles expand/collapse
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   local cur_bufnr = vim.api.nvim_get_current_buf()
   if tree.is_tree_buffer(cur_bufnr) and #entries == 1 and util.is_directory(entries[1]) then
     local entry = entries[1]
@@ -884,9 +884,9 @@ end
 ---@param bufnr integer
 ---@return boolean
 local function maybe_hijack_directory_buffer(bufnr)
-  local config = require("oil.config")
-  local fs = require("oil.fs")
-  local util = require("oil.util")
+  local config = require("oil-tree.config")
+  local fs = require("oil-tree.fs")
+  local util = require("oil-tree.util")
   local bufname = vim.api.nvim_buf_get_name(bufnr)
   if bufname == "" then
     return false
@@ -1074,13 +1074,13 @@ M.save = function(opts, cb)
       end
     end
   end
-  local mutator = require("oil.mutator")
+  local mutator = require("oil-tree.mutator")
   mutator.try_write_changes(opts.confirm, cb)
 end
 
 local function restore_alt_buf()
   if vim.bo.filetype == "oil" then
-    require("oil.view").set_win_options()
+    require("oil-tree.view").set_win_options()
     vim.api.nvim_win_set_var(0, "oil_did_enter", true)
   elseif vim.w.oil_did_enter then
     vim.api.nvim_win_del_var(0, "oil_did_enter")
@@ -1107,11 +1107,11 @@ end
 ---@private
 ---@param bufnr integer
 M.load_oil_buffer = function(bufnr)
-  local config = require("oil.config")
-  local keymap_util = require("oil.keymap_util")
-  local loading = require("oil.loading")
-  local util = require("oil.util")
-  local view = require("oil.view")
+  local config = require("oil-tree.config")
+  local keymap_util = require("oil-tree.keymap_util")
+  local loading = require("oil-tree.loading")
+  local util = require("oil-tree.util")
+  local view = require("oil-tree.view")
   local bufname = vim.api.nvim_buf_get_name(bufnr)
   local scheme, path = util.parse_url(bufname)
   if config.adapter_aliases[scheme] then
@@ -1169,7 +1169,7 @@ M.load_oil_buffer = function(bufnr)
       if vim.endswith(bufname, "/") then
         vim.cmd.doautocmd({ args = { "BufReadPre", bufname }, mods = { emsg_silent = true } })
         -- Initialize tree view if configured as default
-        local tree = require("oil.tree")
+        local tree = require("oil-tree.tree")
         if config.tree.default_view == "tree" and not tree.is_tree_buffer(bufnr) then
           tree.init_state(bufnr, bufname)
         end
@@ -1187,7 +1187,7 @@ M.load_oil_buffer = function(bufnr)
 end
 
 local function close_preview_window_if_not_in_oil()
-  local util = require("oil.util")
+  local util = require("oil-tree.util")
   local preview_win_id = util.get_preview_win()
   if not preview_win_id or not vim.w[preview_win_id].oil_entry_id then
     return
@@ -1209,13 +1209,13 @@ local _on_key_ns = 0
 ---Initialize oil
 ---@param opts oil.setupOpts|nil
 M.setup = function(opts)
-  local Ringbuf = require("oil.ringbuf")
-  local config = require("oil.config")
+  local Ringbuf = require("oil-tree.ringbuf")
+  local config = require("oil-tree.config")
 
   config.setup(opts)
   set_colors()
   local callback = function(args)
-    local util = require("oil.util")
+    local util = require("oil-tree.util")
     if args.smods.tab > 0 then
       vim.cmd.tabnew()
     end
@@ -1237,7 +1237,7 @@ M.setup = function(opts)
         preview = true
         table.remove(args.fargs, i)
       elseif v == "--progress" then
-        local mutator = require("oil.mutator")
+        local mutator = require("oil-tree.mutator")
         if mutator.is_mutating() then
           mutator.show_progress()
         else
@@ -1367,7 +1367,7 @@ M.setup = function(opts)
     group = aug,
     pattern = "*",
     callback = function()
-      local util = require("oil.util")
+      local util = require("oil-tree.util")
       if not util.is_oil_bufnr(0) then
         vim.w.oil_original_buffer = vim.api.nvim_get_current_buf()
         vim.w.oil_original_view = vim.fn.winsaveview()
@@ -1381,14 +1381,14 @@ M.setup = function(opts)
     group = aug,
     pattern = "*",
     callback = function()
-      local util = require("oil.util")
+      local util = require("oil-tree.util")
       local bufname = vim.api.nvim_buf_get_name(0)
       local scheme = util.parse_url(bufname)
       local is_oil_buf = scheme and config.adapters[scheme]
       -- We want to filter out oil buffers that are not directories (i.e. ssh files)
       local is_oil_dir_or_unknown = (vim.bo.filetype == "oil" or vim.bo.filetype == "")
       if is_oil_buf and is_oil_dir_or_unknown then
-        local view = require("oil.view")
+        local view = require("oil-tree.view")
         view.maybe_set_cursor()
         -- While we are in an oil buffer, set the alternate file to the buffer we were in prior to
         -- opening oil
@@ -1441,7 +1441,7 @@ M.setup = function(opts)
     pattern = "*",
     nested = true,
     callback = function(params)
-      local util = require("oil.util")
+      local util = require("oil-tree.util")
       if not util.is_oil_bufnr(params.buf) or vim.w.oil_did_enter then
         return
       end
@@ -1484,7 +1484,7 @@ M.setup = function(opts)
       if vim.g.SessionLoad ~= 1 then
         return
       end
-      local util = require("oil.util")
+      local util = require("oil-tree.util")
       local scheme = util.parse_url(params.file)
       if config.adapters[scheme] and vim.api.nvim_buf_line_count(params.buf) == 1 then
         M.load_oil_buffer(params.buf)

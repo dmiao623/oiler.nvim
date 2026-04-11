@@ -1,5 +1,5 @@
 require("plenary.async").tests.add_to_env()
-local oil = require("oil")
+local oil = require("oil-tree")
 local test_util = require("tests.test_util")
 
 a.describe("window options", function()

@@ -1,5 +1,5 @@
-local cache = require("oil.cache")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local util = require("oil-tree.util")
 local M = {}
 
 ---@param url string

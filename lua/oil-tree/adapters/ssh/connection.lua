@@ -1,6 +1,6 @@
-local config = require("oil.config")
-local layout = require("oil.layout")
-local util = require("oil.util")
+local config = require("oil-tree.config")
+local layout = require("oil-tree.layout")
+local util = require("oil-tree.util")
 
 ---@class (exact) oil.sshCommand
 ---@field cmd string|string[]
@@ -142,7 +142,7 @@ function SSHConnection.new(url)
           self:_set_connection_error("SSH connection terminated gracefully")
         else
           self:_set_connection_error(
-            'Unknown SSH error\nTo see more, run :lua require("oil.adapters.ssh").open_terminal()'
+            'Unknown SSH error\nTo see more, run :lua require("oil-tree.adapters.ssh").open_terminal()'
           )
         end
       end, 20)

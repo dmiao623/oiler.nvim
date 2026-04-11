@@ -1,5 +1,5 @@
-local config = require("oil.config")
-local constants = require("oil.constants")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
 
 local M = {}
 
@@ -243,7 +243,7 @@ end
 ---@param url string
 ---@return string[]
 local function get_possible_buffer_names_from_url(url)
-  local fs = require("oil.fs")
+  local fs = require("oil-tree.fs")
   local scheme, path = M.parse_url(url)
   if config.adapters[scheme] == "files" then
     assert(path)
@@ -380,7 +380,7 @@ end
 ---@return string
 M.addslash = function(path, os_slash)
   local slash = "/"
-  if os_slash and require("oil.fs").is_windows then
+  if os_slash and require("oil-tree.fs").is_windows then
     slash = "\\"
   end
 
@@ -412,7 +412,7 @@ M.get_title = function(winid)
 
   if config.adapters[scheme] == "files" then
     assert(path)
-    local fs = require("oil.fs")
+    local fs = require("oil-tree.fs")
     title = vim.fn.fnamemodify(fs.posix_to_os_path(path), ":~")
   end
   return title
@@ -762,7 +762,7 @@ end
 ---@param opts {columns?: string[], no_cache?: boolean}
 ---@param callback fun(err: nil|string, entries: nil|oil.InternalEntry[])
 M.adapter_list_all = function(adapter, url, opts, callback)
-  local cache = require("oil.cache")
+  local cache = require("oil-tree.cache")
   if not opts.no_cache then
     local entries = cache.list_url(url)
     if not vim.tbl_isempty(entries) then
@@ -793,7 +793,7 @@ M.send_to_quickfix = function(opts)
   if type(opts) ~= "table" then
     opts = {}
   end
-  local oil = require("oil")
+  local oil = require("oil-tree")
   local dir = oil.get_current_dir()
   if type(dir) ~= "string" then
     return
@@ -907,7 +907,7 @@ end
 ---@param entry oil.Entry
 ---@param callback fun(normalized_url: string)
 M.get_edit_path = function(bufnr, entry, callback)
-  local pathutil = require("oil.pathutil")
+  local pathutil = require("oil-tree.pathutil")
 
   local bufname = vim.api.nvim_buf_get_name(bufnr)
   local scheme, dir = M.parse_url(bufname)
@@ -915,7 +915,7 @@ M.get_edit_path = function(bufnr, entry, callback)
   assert(scheme and dir and adapter)
 
   -- In tree view, use the parent URL from the line info instead of the buffer name
-  local tree = require("oil.tree")
+  local tree = require("oil-tree.tree")
   if tree.is_tree_buffer(bufnr) then
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local line_info = vim.b[bufnr].oil_tree_line_info

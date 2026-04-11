@@ -1,8 +1,8 @@
 require("plenary.async").tests.add_to_env()
 local TmpDir = require("tests.tmpdir")
-local oil = require("oil")
+local oil = require("oil-tree")
 local test_util = require("tests.test_util")
-local util = require("oil.util")
+local util = require("oil-tree.util")
 
 a.describe("oil preview", function()
   local tmpdir

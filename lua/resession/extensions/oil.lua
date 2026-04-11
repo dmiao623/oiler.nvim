@@ -11,7 +11,7 @@ M.save_win = function(winid)
 end
 
 M.load_win = function(winid, config)
-  require("oil").open(config.bufname)
+  require("oil-tree").open(config.bufname)
 end
 
 return M

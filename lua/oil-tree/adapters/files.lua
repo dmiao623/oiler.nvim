@@ -1,12 +1,12 @@
-local cache = require("oil.cache")
-local columns = require("oil.columns")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local fs = require("oil.fs")
-local git = require("oil.git")
-local log = require("oil.log")
-local permissions = require("oil.adapters.files.permissions")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local fs = require("oil-tree.fs")
+local git = require("oil-tree.git")
+local log = require("oil-tree.log")
+local permissions = require("oil-tree.adapters.files.permissions")
+local util = require("oil-tree.util")
 local uv = vim.uv or vim.loop
 
 local M = {}
@@ -619,7 +619,7 @@ M.perform_action = function(action, cb)
     end
 
     if config.delete_to_trash then
-      require("oil.adapters.trash").delete_to_trash(path, cb)
+      require("oil-tree.adapters.trash").delete_to_trash(path, cb)
     else
       fs.recursive_delete(action.entry_type, path, cb)
     end

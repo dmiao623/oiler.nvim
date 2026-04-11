@@ -1,6 +1,6 @@
-local fs = require("oil.fs")
+local fs = require("oil-tree.fs")
 local test_util = require("tests.test_util")
-local util = require("oil.util")
+local util = require("oil-tree.util")
 
 describe("update_moved_buffers", function()
   after_each(function()

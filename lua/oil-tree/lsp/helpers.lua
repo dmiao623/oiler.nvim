@@ -1,7 +1,7 @@
-local config = require("oil.config")
-local fs = require("oil.fs")
-local util = require("oil.util")
-local workspace = require("oil.lsp.workspace")
+local config = require("oil-tree.config")
+local fs = require("oil-tree.fs")
+local util = require("oil-tree.util")
+local workspace = require("oil-tree.lsp.workspace")
 
 local M = {}
 

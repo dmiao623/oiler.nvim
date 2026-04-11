@@ -1,11 +1,11 @@
 require("plenary.async").tests.add_to_env()
-local cache = require("oil.cache")
-local test_adapter = require("oil.adapters.test")
-local util = require("oil.util")
+local cache = require("oil-tree.cache")
+local test_adapter = require("oil-tree.adapters.test")
+local util = require("oil-tree.util")
 local M = {}
 
 M.reset_editor = function()
-  require("oil").setup({
+  require("oil-tree").setup({
     columms = {},
     adapters = {
       ["oil-test://"] = "test",
@@ -35,7 +35,7 @@ local function throwiferr(err, ...)
 end
 
 M.oil_open = function(...)
-  a.wrap(require("oil").open, 3)(...)
+  a.wrap(require("oil-tree").open, 3)(...)
 end
 
 M.await = function(fn, nargs, ...)
@@ -99,13 +99,13 @@ M.actions = {
 
   ---Save all changes and wait for operation to complete
   save = function()
-    vim.schedule_wrap(require("oil").save)({ confirm = false })
+    vim.schedule_wrap(require("oil-tree").save)({ confirm = false })
     M.wait_for_autocmd({ "User", pattern = "OilMutationComplete" })
   end,
 
   ---@param bufnr? integer
   reload = function(bufnr)
-    M.await(require("oil.view").render_buffer_async, 3, bufnr or 0)
+    M.await(require("oil-tree.view").render_buffer_async, 3, bufnr or 0)
   end,
 
   ---Move cursor to a file or directory in an oil buffer

@@ -54,7 +54,7 @@ local default_config = {
   -- Keymaps in oil buffer. Can be any value that `vim.keymap.set` accepts OR a table of keymap
   -- options with a `callback` (e.g. { callback = function() ... end, desc = "", mode = "n" })
   -- Additionally, if it is a string that matches "actions.<name>",
-  -- it will use the mapping at require("oil.actions").<name>
+  -- it will use the mapping at require("oil-tree.actions").<name>
   -- Set to `false` to remove a keymap
   -- See :help oil-actions for a list of all available actions
   keymaps = {
@@ -515,7 +515,7 @@ M.get_adapter_by_scheme = function(scheme)
       return nil
     end
     local ok
-    ok, adapter = pcall(require, string.format("oil.adapters.%s", name))
+    ok, adapter = pcall(require, string.format("oil-tree.adapters.%s", name))
     if ok then
       adapter.name = name
       M._adapter_by_scheme[scheme] = adapter

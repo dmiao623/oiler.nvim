@@ -1,4 +1,4 @@
-local log = require("oil.log")
+local log = require("oil-tree.log")
 local M = {}
 
 local uv = vim.uv or vim.loop

@@ -1,4 +1,4 @@
-local fs = require("oil.fs")
+local fs = require("oil-tree.fs")
 local ms = require("vim.lsp.protocol").Methods
 if vim.fn.has("nvim-0.10") == 0 then
   ms = {

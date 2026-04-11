@@ -1,7 +1,7 @@
-local actions = require("oil.actions")
-local config = require("oil.config")
-local layout = require("oil.layout")
-local util = require("oil.util")
+local actions = require("oil-tree.actions")
+local config = require("oil-tree.config")
+local layout = require("oil-tree.layout")
+local util = require("oil-tree.util")
 local M = {}
 
 ---@param rhs string|table|fun()

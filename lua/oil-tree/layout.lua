@@ -106,7 +106,7 @@ end
 
 ---@return vim.api.keyset.win_config
 M.get_fullscreen_win_opts = function()
-  local config = require("oil.config")
+  local config = require("oil-tree.config")
 
   local total_width = M.get_editor_width()
   local total_height = M.get_editor_height()

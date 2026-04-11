@@ -1,9 +1,9 @@
 require("plenary.async").tests.add_to_env()
 local TmpDir = require("tests.tmpdir")
-local actions = require("oil.actions")
-local oil = require("oil")
+local actions = require("oil-tree.actions")
+local oil = require("oil-tree")
 local test_util = require("tests.test_util")
-local view = require("oil.view")
+local view = require("oil-tree.view")
 
 a.describe("regression tests", function()
   local tmpdir
@@ -115,7 +115,7 @@ a.describe("regression tests", function()
     local bufnr = vim.api.nvim_get_current_buf()
     vim.cmd.edit({ bang = true })
     test_util.wait_for_autocmd({ "User", pattern = "OilEnter" })
-    assert.are.same({ bufnr }, require("oil.view").get_all_buffers())
+    assert.are.same({ bufnr }, require("oil-tree.view").get_all_buffers())
   end)
 
   a.it("can copy a file multiple times", function()

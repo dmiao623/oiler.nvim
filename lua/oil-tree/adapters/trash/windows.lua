@@ -1,11 +1,11 @@
-local util = require("oil.util")
+local util = require("oil-tree.util")
 local uv = vim.uv or vim.loop
-local cache = require("oil.cache")
-local config = require("oil.config")
-local constants = require("oil.constants")
-local files = require("oil.adapters.files")
-local fs = require("oil.fs")
-local powershell_trash = require("oil.adapters.trash.windows.powershell-trash")
+local cache = require("oil-tree.cache")
+local config = require("oil-tree.config")
+local constants = require("oil-tree.constants")
+local files = require("oil-tree.adapters.files")
+local fs = require("oil-tree.fs")
+local powershell_trash = require("oil-tree.adapters.trash.windows.powershell-trash")
 
 local FIELD_META = constants.FIELD_META
 local FIELD_TYPE = constants.FIELD_TYPE

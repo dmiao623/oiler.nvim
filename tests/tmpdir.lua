@@ -1,4 +1,4 @@
-local fs = require("oil.fs")
+local fs = require("oil-tree.fs")
 local test_util = require("tests.test_util")
 
 local await = test_util.await

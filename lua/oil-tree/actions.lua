@@ -1,12 +1,12 @@
-local oil = require("oil")
-local util = require("oil.util")
+local oil = require("oil-tree")
+local util = require("oil-tree.util")
 
 local M = {}
 
 M.show_help = {
   callback = function()
-    local config = require("oil.config")
-    require("oil.keymap_util").show_help(config.keymaps)
+    local config = require("oil-tree.config")
+    require("oil-tree.keymap_util").show_help(config.keymaps)
   end,
   desc = "Show default keymaps",
 }
@@ -95,7 +95,7 @@ M.preview = {
       if entry.id == cur_id then
         vim.api.nvim_win_close(winid, true)
         if util.is_floating_win() then
-          local layout = require("oil.layout")
+          local layout = require("oil-tree.layout")
           local win_opts = layout.get_fullscreen_win_opts()
           vim.api.nvim_win_set_config(0, win_opts)
         end
@@ -235,14 +235,14 @@ M.open_cwd = {
 M.toggle_hidden = {
   desc = "Toggle hidden files and directories",
   callback = function()
-    require("oil.view").toggle_hidden()
+    require("oil-tree.view").toggle_hidden()
   end,
 }
 
 M.open_terminal = {
   desc = "Open a terminal in the current directory",
   callback = function()
-    local config = require("oil.config")
+    local config = require("oil-tree.config")
     local bufname = vim.api.nvim_buf_get_name(0)
     local adapter = config.get_adapter_by_scheme(bufname)
     if not adapter then
@@ -262,8 +262,8 @@ M.open_terminal = {
     elseif adapter.name == "ssh" then
       local bufnr = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_set_current_buf(bufnr)
-      local url = require("oil.adapters.ssh").parse_url(bufname)
-      local cmd = require("oil.adapters.ssh.connection").create_ssh_command(url)
+      local url = require("oil-tree.adapters.ssh").parse_url(bufname)
+      local cmd = require("oil-tree.adapters.ssh.connection").create_ssh_command(url)
       local term_id
       if vim.fn.has("nvim-0.11") == 1 then
         term_id = vim.fn.jobstart(cmd, { term = true })
@@ -365,8 +365,8 @@ M.open_cmdline = {
     opts = vim.tbl_deep_extend("keep", opts or {}, {
       shorten_path = true,
     })
-    local config = require("oil.config")
-    local fs = require("oil.fs")
+    local config = require("oil-tree.config")
+    local fs = require("oil-tree.fs")
     local entry = oil.get_cursor_entry()
     if not entry then
       return
@@ -456,14 +456,14 @@ M.copy_entry_filename = {
 M.copy_to_system_clipboard = {
   desc = "Copy the entry under the cursor to the system clipboard",
   callback = function()
-    require("oil.clipboard").copy_to_system_clipboard()
+    require("oil-tree.clipboard").copy_to_system_clipboard()
   end,
 }
 
 M.paste_from_system_clipboard = {
   desc = "Paste the system clipboard into the current oil directory",
   callback = function(opts)
-    require("oil.clipboard").paste_from_system_clipboard(opts and opts.delete_original)
+    require("oil-tree.clipboard").paste_from_system_clipboard(opts and opts.delete_original)
   end,
   parameters = {
     delete_original = {
@@ -477,7 +477,7 @@ M.open_cmdline_dir = {
   desc = "Open vim cmdline with current directory as an argument",
   deprecated = true,
   callback = function()
-    local fs = require("oil.fs")
+    local fs = require("oil-tree.fs")
     local dir = oil.get_current_dir()
     if dir then
       open_cmdline_with_path(fs.shorten_path(dir))
@@ -527,7 +527,7 @@ M.change_sort = {
 M.toggle_trash = {
   desc = "Jump to and from the trash for the current directory",
   callback = function()
-    local fs = require("oil.fs")
+    local fs = require("oil-tree.fs")
     local bufname = vim.api.nvim_buf_get_name(0)
     local scheme, path = util.parse_url(bufname)
     local bufnr = vim.api.nvim_get_current_buf()
@@ -619,8 +619,8 @@ M.add_to_loclist = {
 M.toggle_tree_view = {
   desc = "Toggle between flat and tree view",
   callback = function()
-    local tree = require("oil.tree")
-    local view = require("oil.view")
+    local tree = require("oil-tree.tree")
+    local view = require("oil-tree.view")
     local bufnr = vim.api.nvim_get_current_buf()
     if vim.bo[bufnr].filetype ~= "oil" then
       return
@@ -638,7 +638,7 @@ M.toggle_tree_view = {
 M.tree_open = {
   desc = "Expand directory under cursor in tree view",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if not tree.is_tree_buffer(bufnr) then
       return
@@ -665,7 +665,7 @@ M.tree_open = {
 M.tree_close = {
   desc = "Collapse directory under cursor in tree view",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if not tree.is_tree_buffer(bufnr) then
       return
@@ -699,7 +699,7 @@ M.tree_close = {
 M.tree_open_all = {
   desc = "Expand all directories recursively in tree view",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if tree.is_tree_buffer(bufnr) then
       tree.expand_all(bufnr)
@@ -710,7 +710,7 @@ M.tree_open_all = {
 M.tree_close_all = {
   desc = "Collapse all directories in tree view",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if tree.is_tree_buffer(bufnr) then
       tree.collapse_all(bufnr)
@@ -721,7 +721,7 @@ M.tree_close_all = {
 M.tree_set_root = {
   desc = "Set directory under cursor as tree root",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if not tree.is_tree_buffer(bufnr) then
       return
@@ -750,12 +750,12 @@ M.tree_set_root = {
 M.tree_indent = {
   desc = "Indent entry in tree view (move into directory above)",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if not tree.is_tree_buffer(bufnr) then
       return
     end
-    local config = require("oil.config")
+    local config = require("oil-tree.config")
     local indent_width = config.tree.indent
     local indent_str = string.rep(" ", indent_width)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
@@ -778,12 +778,12 @@ M.tree_indent = {
 M.tree_unindent = {
   desc = "Unindent entry in tree view (move out of current directory)",
   callback = function()
-    local tree = require("oil.tree")
+    local tree = require("oil-tree.tree")
     local bufnr = vim.api.nvim_get_current_buf()
     if not tree.is_tree_buffer(bufnr) then
       return
     end
-    local config = require("oil.config")
+    local config = require("oil-tree.config")
     local indent_width = config.tree.indent
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]

@@ -1,8 +1,8 @@
-local columns = require("oil.columns")
-local config = require("oil.config")
-local layout = require("oil.layout")
-local loading = require("oil.loading")
-local util = require("oil.util")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local layout = require("oil-tree.layout")
+local loading = require("oil-tree.loading")
+local util = require("oil-tree.util")
 local Progress = {}
 
 local FPS = 20

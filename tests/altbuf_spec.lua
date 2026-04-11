@@ -1,6 +1,6 @@
 require("plenary.async").tests.add_to_env()
-local fs = require("oil.fs")
-local oil = require("oil")
+local fs = require("oil-tree.fs")
+local oil = require("oil-tree")
 local test_util = require("tests.test_util")
 
 a.describe("Alternate buffer", function()

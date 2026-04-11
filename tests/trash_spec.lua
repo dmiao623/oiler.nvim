@@ -7,10 +7,10 @@ a.describe("freedesktop", function()
   local tmphome
   local home = vim.env.XDG_DATA_HOME
   a.before_each(function()
-    require("oil.config").delete_to_trash = true
+    require("oil-tree.config").delete_to_trash = true
     tmpdir = TmpDir.new()
     tmphome = TmpDir.new()
-    package.loaded["oil.adapters.trash"] = require("oil.adapters.trash.freedesktop")
+    package.loaded["oil-tree.adapters.trash"] = require("oil-tree.adapters.trash.freedesktop")
     vim.env.XDG_DATA_HOME = tmphome.path
   end)
   a.after_each(function()
@@ -22,7 +22,7 @@ a.describe("freedesktop", function()
       tmphome:dispose()
     end
     test_util.reset_editor()
-    package.loaded["oil.adapters.trash"] = nil
+    package.loaded["oil-tree.adapters.trash"] = nil
   end)
 
   a.it("files can be moved to the trash", function()

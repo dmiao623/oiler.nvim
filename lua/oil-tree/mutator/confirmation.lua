@@ -1,7 +1,7 @@
-local columns = require("oil.columns")
-local config = require("oil.config")
-local layout = require("oil.layout")
-local util = require("oil.util")
+local columns = require("oil-tree.columns")
+local config = require("oil-tree.config")
+local layout = require("oil-tree.layout")
+local util = require("oil-tree.util")
 local M = {}
 
 ---@param actions oil.Action[]

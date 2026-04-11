@@ -11,7 +11,7 @@ Log.level = vim.log.levels.WARN
 
 ---@return string
 Log.get_logfile = function()
-  local fs = require("oil.fs")
+  local fs = require("oil-tree.fs")
 
   local ok, stdpath = pcall(vim.fn.stdpath, "log")
   if not ok then
@@ -73,7 +73,7 @@ local function initialize()
   end
 
   local parent = vim.fs.dirname(filepath)
-  require("oil.fs").mkdirp(parent)
+  require("oil-tree.fs").mkdirp(parent)
 
   local logfile, openerr = io.open(filepath, "a+")
   if not logfile then
