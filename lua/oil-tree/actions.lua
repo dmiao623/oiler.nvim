@@ -758,19 +758,22 @@ M.tree_indent = {
     local config = require("oil-tree.config")
     local indent_width = config.tree.indent
     local indent_str = string.rep(" ", indent_width)
+    local count = vim.v.count1
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]
+    local lines = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum - 1 + count, true)
 
-    local new_line
-    local id_prefix, rest = line:match("^(/%d+%s)(.*)")
-    if id_prefix then
-      new_line = id_prefix .. indent_str .. rest
-    else
-      -- New entry: indent at the start
-      new_line = indent_str .. line
+    local new_lines = {}
+    for _, line in ipairs(lines) do
+      local id_prefix, rest = line:match("^(/%d+%s)(.*)")
+      if id_prefix then
+        table.insert(new_lines, id_prefix .. indent_str .. rest)
+      else
+        -- New entry: indent at the start
+        table.insert(new_lines, indent_str .. line)
+      end
     end
 
-    vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum, true, { new_line })
+    vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum - 1 + count, true, new_lines)
     vim.bo[bufnr].modified = true
   end,
 }
@@ -785,26 +788,36 @@ M.tree_unindent = {
     end
     local config = require("oil-tree.config")
     local indent_width = config.tree.indent
+    local count = vim.v.count1
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local line = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, true)[1]
+    local lines = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum - 1 + count, true)
 
-    local new_line
-    local id_prefix, rest = line:match("^(/%d+%s)(.*)")
-    if id_prefix then
-      local lead_ws = rest:match("^(%s*)")
-      if #lead_ws >= indent_width then
-        new_line = id_prefix .. rest:sub(indent_width + 1)
-      end
-    else
-      -- New entry: unindent from start
-      local lead_ws = line:match("^(%s*)")
-      if #lead_ws >= indent_width then
-        new_line = line:sub(indent_width + 1)
+    local new_lines = {}
+    local changed = false
+    for _, line in ipairs(lines) do
+      local id_prefix, rest = line:match("^(/%d+%s)(.*)")
+      if id_prefix then
+        local lead_ws = rest:match("^(%s*)")
+        if #lead_ws >= indent_width then
+          table.insert(new_lines, id_prefix .. rest:sub(indent_width + 1))
+          changed = true
+        else
+          table.insert(new_lines, line)
+        end
+      else
+        -- New entry: unindent from start
+        local lead_ws = line:match("^(%s*)")
+        if #lead_ws >= indent_width then
+          table.insert(new_lines, line:sub(indent_width + 1))
+          changed = true
+        else
+          table.insert(new_lines, line)
+        end
       end
     end
 
-    if new_line then
-      vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum, true, { new_line })
+    if changed then
+      vim.api.nvim_buf_set_lines(bufnr, lnum - 1, lnum - 1 + count, true, new_lines)
       vim.bo[bufnr].modified = true
     end
   end,
